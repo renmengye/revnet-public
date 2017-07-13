@@ -9,7 +9,7 @@ git clone --recursive git://github.com/renmengye/revnet-public.git
 cd revnet-public
 # Change paths in setup.sh
 # It also provides options to download CIFAR and ImageNet data. (ImageNet
-# experiments requires tfrecord format).
+# experiments require dataset in tfrecord format).
 ./setup.sh
 ```
 
