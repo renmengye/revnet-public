@@ -1,11 +1,12 @@
 # revnet-public
-Code for paper "The Reversible Residual Network: Backpropagation without
-Storing Activations"
+Code for paper
+*The Reversible Residual Network: Backpropagation without Storing Activations.*
+[[arxiv](https://arxiv.org/abs/1707.04585)]
 
 ## Installation
 Customize paths first in `setup.sh` (data folder, model save folder, etc.).
 ```bash
-git clone --recursive git://github.com/renmengye/revnet-public.git
+git clone git://github.com/renmengye/revnet-public.git
 cd revnet-public
 # Change paths in setup.sh
 # It also provides options to download CIFAR and ImageNet data. (ImageNet
@@ -43,15 +44,17 @@ wget http://www.cs.toronto.edu/~mren/revnet/pretrained/revnet-104.tar.gz
 
 ## Citation
 If you use our code, please consider cite the following:
-The Reversible Residual Network: Backpropagation without Storing Actications.
 Aidan N. Gomez, Mengye Ren, Raquel Urtasun, Roger B. Grosse.
+The Reversible Residual Network: Backpropagation without Storing Actications.
+*CoRR*, abs/1707.04585, 2017.
+
 ```
 @article{gomez17revnet,
   author   = {Aidan N. Gomez and Mengye Ren and Raquel Urtasun and Roger B. Grosse},
   title    = {The Reversible Residual Network: Backpropagation without Storing Activations}
   journal  = {CoRR},
-  volume   = {},
+  volume   = {abs/1707.04585},
   year     = {2017},
-  url      = {},
+  url      = {https://arxiv.org/abs/1707.04585},
 }
 ```
