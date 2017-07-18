@@ -42,6 +42,10 @@ RevNet-104: 23.10% error rate on ImageNet validation set (top-1 single crop).
 wget http://www.cs.toronto.edu/~mren/revnet/pretrained/revnet-104.tar.gz
 ```
 
+## Future Releases
+* `tf.while_loop` implementation of RevNets, which achieves further memory
+  savings.
+
 ## Citation
 If you use our code, please consider cite the following:
 Aidan N. Gomez, Mengye Ren, Raquel Urtasun, Roger B. Grosse.
