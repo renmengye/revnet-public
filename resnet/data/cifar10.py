@@ -5,6 +5,9 @@ import numpy as np
 import tensorflow as tf
 
 from resnet.data import cifar_input
+from resnet.utils import logger
+
+log = logger.get()
 
 
 class CIFAR10Dataset():
