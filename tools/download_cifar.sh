@@ -8,8 +8,10 @@ echo "Downloading CIFAR-10"
 mkdir -p $CIFAR10_DIR
 wget $CIFAR10_URL -O "$CIFAR10_DIR/cifar-10.tar.gz"
 tar xzf "$CIFAR10_DIR/cifar-10.tar.gz" -C $CIFAR10_DIR
+rm -rf "$CIFAR10_DIR/cifar-10.tar.gz"
 
 echo "Downloading CIFAR-100"
 mkdir -p $CIFAR100_DIR
 wget $CIFAR100_URL -O "$CIFAR100_DIR/cifar-100.tar.gz"
 tar xzf "$CIFAR100_DIR/cifar-100.tar.gz" -C $CIFAR100_DIR
+rm -rf "$CIFAR100_DIR/cifar-100.tar.gz"

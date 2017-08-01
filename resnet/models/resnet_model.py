@@ -37,6 +37,7 @@ from resnet.utils import logger
 log = logger.get()
 
 
+@RegisterModel("resnet")
 class ResNetModel(object):
   """ResNet model."""
 
@@ -47,7 +48,6 @@ class ResNetModel(object):
                inp=None,
                label=None,
                dtype=tf.float32,
-               dilated=False,
                batch_size=None,
                apply_grad=True,
                idx=0):
@@ -549,27 +549,3 @@ class ResNetModel(object):
   @property
   def grads_and_vars(self):
     return self._grads_and_vars
-
-  @property
-  def dilated(self):
-    return self._dilated
-
-
-@RegisterModel("resnet")
-def get_resnet_model(config,
-                     is_training=True,
-                     inference_only=False,
-                     inp=None,
-                     label=None,
-                     batch_size=None,
-                     apply_grad=True,
-                     idx=0):
-  return ResNetModel(
-      config,
-      is_training=is_training,
-      inference_only=inference_only,
-      inp=inp,
-      label=label,
-      batch_size=batch_size,
-      apply_grad=apply_grad,
-      idx=idx)
