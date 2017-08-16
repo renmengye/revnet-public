@@ -47,24 +47,33 @@ def _get_config():
   return get_config_from_json(os.path.join(save_folder, "conf.json"))
 
 
-def _get_model(config, inp, label):
+def _get_model(config, trn_inp, trn_label, val_inp, val_label):
   with log.verbose_level(2):
-    with tf.name_scope("Valid"):
+    with tf.name_scope("Train"):
       with tf.variable_scope("Model"):
+        m = get_model(
+            config.model_class,
+            config,
+            inp=trn_inp,
+            label=trn_label,
+            is_training=False,
+            inference_only=True)
+    with tf.name_scope("Valid"):
+      with tf.variable_scope("Model", reuse=True):
         mvalid = get_model(
             config.model_class,
             config,
-            inp=inp,
-            label=label,
+            inp=val_inp,
+            label=val_label,
             is_training=False,
             inference_only=True)
-  return mvalid
+  return m, mvalid
 
 
-def _get_dataset(config):
+def _get_dataset(config, split):
   """Prepares a dataset input tensors."""
   num_preprocess_threads = FLAGS.num_preprocess_threads * NUM_GPU
-  dataset = ImagenetData(subset="validation")
+  dataset = ImagenetData(subset=split)
   images, labels = inputs(
       dataset,
       cycle=True,
@@ -85,14 +94,19 @@ def evaluate(sess, model, num_batch=100):
   return acc
 
 
-def eval_model(config, model, save_folder, logs_folder=None, ckpt_num=-1):
+def eval_model(config,
+               trn_model,
+               val_model,
+               save_folder,
+               logs_folder=None,
+               ckpt_num=-1):
   log.info("Config: {}".format(config.__dict__))
   exp_logger = ExperimentLogger(logs_folder)
   # Initializes variables.
   with tf.Session() as sess:
     # Start the queue runners.
-    tf.train.start_queue_runners(sess=sess)
-    sess.run(tf.global_variables_initializer())
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     saver = tf.train.Saver()
     if ckpt_num == -1:
       ckpt = tf.train.latest_checkpoint(save_folder)
@@ -100,14 +114,19 @@ def eval_model(config, model, save_folder, logs_folder=None, ckpt_num=-1):
       ckpt = os.path.join(save_folder, "model.ckpt-{}".format(ckpt_num))
     else:
       raise ValueError("Invalid checkpoint number {}".format(ckpt_num))
+    log.info("Restoring from {}".format(ckpt))
     if not os.path.exists(ckpt + ".meta"):
       raise ValueError("Checkpoint not exists")
     saver.restore(sess, ckpt)
-    train_acc = evaluate(sess, model, num_batch=100)
-    val_acc = evaluate(sess, model, num_batch=NUM_BATCH)
+    train_acc = evaluate(sess, trn_model, num_batch=100)
+    val_acc = evaluate(sess, val_model, num_batch=NUM_BATCH)
     niter = int(ckpt.split("-")[-1])
     exp_logger.log_train_acc(niter, train_acc)
     exp_logger.log_valid_acc(niter, val_acc)
+
+    # Stop queues.
+    coord.request_stop()
+    coord.join(threads)
   return val_acc
 
 
@@ -133,12 +152,20 @@ def main():
 
     # Configures dataset objects.
     log.info("Building dataset")
-    inp, label = _get_dataset(config)
+    trn_inp, trn_label = _get_dataset(config, "train")
+    val_inp, val_label = _get_dataset(config, "validation")
 
     # Builds models.
     log.info("Building models")
-    model = _get_model(config, inp, label)
-    eval_model(config, model, save_folder, logs_folder, ckpt_num=FLAGS.ckpt_num)
+    trn_model, val_model = _get_model(config, trn_inp, trn_label, val_inp,
+                                      val_label)
+    eval_model(
+        config,
+        trn_model,
+        val_model,
+        save_folder,
+        logs_folder,
+        ckpt_num=FLAGS.ckpt_num)
 
 
 if __name__ == "__main__":
