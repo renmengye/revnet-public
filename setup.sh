@@ -1,5 +1,5 @@
 # Set up absolute path for dataset root here.
-DATA_ROOT='/home/mren3/data'
+DATA_ROOT=''
 
 # Set up absolute path for training logs path here.
 LOGS_DIR=''
