@@ -61,7 +61,7 @@ mkdir -p "${SCRATCH_DIR}"
 WORK_DIR="$(pwd)"
 
 # Download the ImageNet data.
-LABELS_FILE="${WORK_DIR}/data/imagenet_lsvrc_2015_synsets.txt"
+LABELS_FILE="${WORK_DIR}/imagenet_lsvrc_2015_synsets.txt"
 DOWNLOAD_SCRIPT="${WORK_DIR}/download_imagenet.sh"
 "${DOWNLOAD_SCRIPT}" "${SCRATCH_DIR}" "${LABELS_FILE}"
 

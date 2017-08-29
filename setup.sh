@@ -1,5 +1,5 @@
 # Set up absolute path for dataset root here.
-DATA_ROOT=''
+DATA_ROOT='/home/mren3/data'
 
 # Set up absolute path for training logs path here.
 LOGS_DIR=''
@@ -19,7 +19,7 @@ LOCAL_SAVE_DIR='results'
 
 # Put 'yes' here to download CIFAR and ImageNet datasets.
 DOWNLOAD_CIFAR='no'
-DOWNLOAD_IMAGENET='no'
+DOWNLOAD_IMAGENET='yes'
 
 if [ ! -d $DATA_ROOT ]; then
   mkdir -p $DATA_ROOT
