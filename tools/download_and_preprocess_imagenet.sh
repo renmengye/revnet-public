@@ -73,7 +73,7 @@ VALIDATION_DIRECTORY="${SCRATCH_DIR}validation/"
 # sub-directory based on the label (synset) of the image.
 echo "Organizing the validation data into sub-directories."
 PREPROCESS_VAL_SCRIPT="${WORK_DIR}/preprocess_imagenet_validation_data.py"
-VAL_LABELS_FILE="${WORK_DIR}/data/imagenet_2012_validation_synset_labels.txt"
+VAL_LABELS_FILE="${WORK_DIR}/imagenet_2012_validation_synset_labels.txt"
 
 "${PREPROCESS_VAL_SCRIPT}" "${VALIDATION_DIRECTORY}" "${VAL_LABELS_FILE}"
 

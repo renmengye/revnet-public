@@ -48,23 +48,6 @@ echo "Downloading bounding box annotations."
 wget "${BOUNDING_BOX_ANNOTATIONS}" -O "${BBOX_TAR_BALL}"
 echo "Uncompressing bounding box annotations ..."
 tar xzf "${BBOX_TAR_BALL}" -C "${BBOX_DIR}"
-#echo "Uncompressing individual bounding box tar-balls in the training data."
-#echo $(pwd)
-#
-#while read SYNSET; do
-#  echo "Processing: ${SYNSET}"
-#
-#  # Create a directory and delete anything there.
-#  mkdir -p "${BBOX_DIR}/${SYNSET}"
-#  rm -rf "${BBOX_DIR}/${SYNSET}/*"
-#
-#  # Uncompress into the directory.
-#  tar xzf "${BBOX_TAR_BALL}" "${SYNSET}.tar.gz"
-#  tar xzf "${SYNSET}.tar.gz" -C "${BBOX_DIR}/${SYNSET}/"
-#  rm -f "${SYNSET}.tar.gz"
-#
-#  echo "Finished processing: ${SYNSET}"
-#done < "${SYNSETS_FILE}"
 
 LABELS_ANNOTATED="${BBOX_DIR}/*"
 NUM_XML=$(ls -1 ${LABELS_ANNOTATED} | wc -l)
