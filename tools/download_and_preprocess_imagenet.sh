@@ -90,7 +90,7 @@ echo "Finished downloading and preprocessing the ImageNet data."
 # Build the TFRecords version of the ImageNet data.
 BUILD_SCRIPT="${WORK_DIR}/build_imagenet_data.py"
 OUTPUT_DIRECTORY="${DATA_DIR}"
-IMAGENET_METADATA_FILE="${WORK_DIR}/data/imagenet_metadata.txt"
+IMAGENET_METADATA_FILE="${WORK_DIR}/imagenet_metadata.txt"
 
 "${BUILD_SCRIPT}" \
   --train_directory="${TRAIN_DIRECTORY}" \
