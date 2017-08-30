@@ -63,14 +63,14 @@ class ResNet152Config(ResNet50Config):
     self.batch_size = 256
 
 
-@RegisterConfig("revnet-54")
-class RevNet54Config(ResNet50Config):
+@RegisterConfig("revnet-56")
+class RevNet56Config(ResNet50Config):
 
   def __init__(self):
-    super(RevNet54Config, self).__init__()
+    super(RevNet56Config, self).__init__()
     self.model_class = "revnet"
     self.manual_gradients = True
-    self.num_residual_units = [2, 2, 3, 2]  # RevNet-54
+    self.num_residual_units = [2, 2, 3, 2]  # RevNet-56
     self.filters = [128, 128, 256, 512, 832]
 
 

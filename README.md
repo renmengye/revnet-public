@@ -29,7 +29,7 @@ Available values for `MODEL` are `resnet-32/110/164` and `revnet-38/110/164`.
 # Evaluate a trained model. Launch this on a separate GPU. 
 ./run_imagenet_eval.py --id [EXPERIMENT ID]
 ```
-Available values for `MODEL` are `resnet-50/101` and `revnet-54/104`.
+Available values for `MODEL` are `resnet-50/101` and `revnet-56/104`.
 
 ## Provided Model Configs
 See `resnet/configs/cifar_configs.py` and `resnet/configs/imagenet_configs.py`
