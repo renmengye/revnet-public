@@ -50,15 +50,13 @@ wget http://www.cs.toronto.edu/~mren/revnet/pretrained/revnet-104.tar.gz
 If you use our code, please consider cite the following:
 Aidan N. Gomez, Mengye Ren, Raquel Urtasun, Roger B. Grosse.
 The Reversible Residual Network: Backpropagation without Storing Actications.
-*CoRR*, abs/1707.04585, 2017.
+*NIPS*, 2017 (to appear).
 
 ```
-@article{gomez17revnet,
-  author   = {Aidan N. Gomez and Mengye Ren and Raquel Urtasun and Roger B. Grosse},
-  title    = {The Reversible Residual Network: Backpropagation without Storing Activations}
-  journal  = {CoRR},
-  volume   = {abs/1707.04585},
-  year     = {2017},
-  url      = {https://arxiv.org/abs/1707.04585},
+@inproceedings{gomez17revnet,
+  author    = {Aidan N. Gomez and Mengye Ren and Raquel Urtasun and Roger B. Grosse},
+  title     = {The Reversible Residual Network: Backpropagation without Storing Activations}
+  booktitle = {NIPS},
+  year      = {2017},
 }
 ```
