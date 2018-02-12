@@ -294,11 +294,11 @@ class RevNetModel(ResNetModel):
                         map(try_get_variable, b1w_names))
       b2w_list = filter(lambda x: x is not None,
                         map(try_get_variable, b2w_names))
-  
+
     dd1 = tf.gradients(y2_, [y1_] + gw_list, dy2, gate_gradients=True)
     dy2_y1 = dd1[0]
     dy1_plus = dy2_y1 + dy1
-    dgw = dd1[1:] 
+    dgw = dd1[1:]
     dd2 = tf.gradients(y1_, [x1, x2] + fw_list, dy1_plus, gate_gradients=True)
     dx1 = dd2[0]
     dx2 = dd2[1]
@@ -323,6 +323,15 @@ class RevNetModel(ResNetModel):
     with tf.control_dependencies(dw_list):
       dx = self._combine(concat, tf.identity(dx1), tf.identity(dx2))
     return dx, w_list, dw_list
+
+  def _init_conv_grad(self, y, dy):
+    """Gradients for initial convolutions."""
+    w_init = tf.get_variable("init/init_conv/w")
+    beta_init = tf.get_variable("init/init_bn/beta")
+    gamma_init = tf.get_variable("init/init_bn/gamma")
+    w_list = [beta_init, gamma_init, w_init]
+    dw_list = tf.gradients(y, w_list, dy)
+    return w_list, dw_list
 
   def _compute_gradients(self, cost):
     """Computes gradients.
@@ -428,11 +437,7 @@ class RevNetModel(ResNetModel):
         ii -= 1
 
     h_grad = _concat(h_grad, axis=3)
-    w_init = tf.get_variable("init/init_conv/w")
-    beta_init = tf.get_variable("init/init_bn/beta")
-    gamma_init = tf.get_variable("init/init_bn/gamma")
-    var_init = [beta_init, gamma_init, w_init]
-    _grads = tf.gradients(h, var_init, h_grad)
+    var_init, _grads = self._init_conv_grad(h, h_grad)
     grads_list.extend(_grads)
     vars_list.extend(var_init)
 

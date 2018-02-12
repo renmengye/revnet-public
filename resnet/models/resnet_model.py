@@ -156,6 +156,21 @@ class ResNetModel(object):
     grads = tf.gradients(cost, var_list, gate_gradients=True)
     return zip(grads, var_list)
 
+  def _init_conv(self, x, n_filters):
+    """Build initial conv layers."""
+    config = self.config
+    init_filter = config.init_filter
+    with tf.variable_scope("init"):
+      h = self._conv("init_conv", x, init_filter, self.config.num_channel,
+                     n_filters, self._stride_arr(config.init_stride))
+      h = self._batch_norm("init_bn", h)
+      h = self._relu("init_relu", h)
+      # Max-pooling is used in ImageNet experiments to further reduce
+      # dimensionality.
+      if config.init_max_pool:
+        h = tf.nn.max_pool(h, [1, 3, 3, 1], [1, 2, 2, 1], "SAME")
+    return h
+
   def build_inference_network(self, x):
     config = self.config
     is_training = self.is_training
@@ -163,19 +178,7 @@ class ResNetModel(object):
     strides = config.strides
     activate_before_residual = config.activate_before_residual
     filters = [ff for ff in config.filters]  # Copy filter config.
-    init_filter = config.init_filter
-
-    with tf.variable_scope("init"):
-      h = self._conv("init_conv", x, init_filter, self.config.num_channel,
-                     filters[0], self._stride_arr(config.init_stride))
-      h = self._batch_norm("init_bn", h)
-      h = self._relu("init_relu", h)
-
-      # Max-pooling is used in ImageNet experiments to further reduce
-      # dimensionality.
-      if config.init_max_pool:
-        h = tf.nn.max_pool(h, [1, 3, 3, 1], [1, 2, 2, 1], "SAME")
-
+    h = self._init_conv(x, filters[0])
     if config.use_bottleneck:
       res_func = self._bottleneck_residual
       # For CIFAR-10 it's [16, 16, 32, 64] => [16, 64, 128, 256]
