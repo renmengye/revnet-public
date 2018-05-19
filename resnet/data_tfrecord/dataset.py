@@ -30,23 +30,18 @@ import os
 
 import tensorflow as tf
 
-FLAGS = tf.app.flags.FLAGS
-
-# Basic model parameters.
-tf.app.flags.DEFINE_string('data_dir', 'data/imagenet',
-                           """Path to the processed data, i.e. """
-                           """TFRecord of Example protos.""")
-
 
 class Dataset(object):
   """A simple class for handling data sets."""
-  __metaclass__ = ABCMeta
 
-  def __init__(self, name, subset):
+  #__metaclass__ = ABCMeta
+
+  def __init__(self, name, subset, data_dir):
     """Initialize dataset using a subset and the path to the data."""
     assert subset in self.available_subsets(), self.available_subsets()
-    self.name = name
-    self.subset = subset
+    self._name = name
+    self._subset = subset
+    self._data_dir = data_dir
 
   @abstractmethod
   def num_classes(self):
@@ -80,11 +75,11 @@ class Dataset(object):
     Raises:
       ValueError: if there are not data_files matching the subset.
     """
-    tf_record_pattern = os.path.join(FLAGS.data_dir, '%s-*' % self.subset)
+    tf_record_pattern = os.path.join(self.data_dir, '%s-*' % self.subset)
     data_files = tf.gfile.Glob(tf_record_pattern)
     if not data_files:
       print('No files found for dataset %s/%s at %s' % (self.name, self.subset,
-                                                        FLAGS.data_dir))
+                                                        self.data_dir))
 
       self.download_message()
       exit(-1)
@@ -99,3 +94,15 @@ class Dataset(object):
       Reader object that reads the data set.
     """
     return tf.TFRecordReader()
+
+  @property
+  def name(self):
+    return self._name
+
+  @property
+  def subset(self):
+    return self._subset
+
+  @property
+  def data_dir(self):
+    return self._data_dir

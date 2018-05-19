@@ -125,21 +125,8 @@ class MultiTowerModel(object):
       costs = []
       cross_ents = []
       tower_grads_and_vars = []
-
-      if self.is_training:
-        self._lr = tf.get_variable(
-            "learn_rate", [],
-            initializer=tf.constant_initializer(0.0),
-            dtype=self.dtype,
-            trainable=False)
-
       for ii in range(self.num_replica):
-        visible_devices = os.getenv("CUDA_VISIBLE_DEVICES", None)
-        if visible_devices is None:
-          device = self._get_device("cpu", 0)
-        else:
-          num_gpu = len(visible_devices)
-          device = self._get_device("gpu", ii % num_gpu)
+        device = self._get_device("gpu", ii)
         with tf.device(device):
           with tf.name_scope("%s_%d" % ("replica", ii)) as scope:
             tower_ = self._tower_cls(
@@ -155,14 +142,20 @@ class MultiTowerModel(object):
             costs.append(tower_.cost)
             self._towers.append(tower_)
 
+            # Only update BN for the last tower.
+            if ii < self.num_replica - 1 and self.is_training:
+              bn_ops = tf.get_collection_ref(tf.GraphKeys.UPDATE_OPS)
+              del bn_ops[:]
+
             if self.is_training:
               # Calculate the gradients for the batch of data on this tower.
               wd_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
               if len(wd_losses) > 0:
                 log.info("Replica {}, Weight decay variables: {}".format(
                     ii, wd_losses))
-                log.info("Replica {}, Number of weight decay variables: {}".
-                         format(ii, len(wd_losses)))
+                log.info(
+                    "Replica {}, Number of weight decay variables: {}".format(
+                        ii, len(wd_losses)))
               tower_grads_and_vars.append(
                   tower_._compute_gradients(tower_.cost))
 
@@ -173,7 +166,8 @@ class MultiTowerModel(object):
 
       self._output = concat(outputs, axis=0)
       self._output_idx = tf.cast(tf.argmax(self._output, axis=1), tf.int32)
-      self._correct = tf.to_float(tf.equal(self._output_idx, self.label))
+      self._correct = tf.to_float(
+          tf.equal(tf.cast(self._output_idx, self.label.dtype), self.label))
       self._cost = tf.reduce_mean(stack(costs))
       self._cross_ent = tf.reduce_mean(stack(cross_ents))
       if not self.is_training or self.inference_only:
@@ -190,35 +184,28 @@ class MultiTowerModel(object):
             initializer=tf.constant_initializer(0.0),
             trainable=False,
             dtype=self.dtype)
+        self._lr = tf.train.piecewise_constant(
+            global_step,
+            [float(ss) for ss in self.config.learn_rate_decay_steps],
+            [self.config.learn_rate] + list(self.config.learn_rate_list))
         self._global_step = global_step
         opt = tf.train.MomentumOptimizer(self.lr, momentum=self.config.momentum)
         train_op = opt.apply_gradients(grads_and_vars, global_step=global_step)
         self._train_op = train_op
-      self._new_lr = tf.placeholder(
-          self.dtype, shape=[], name="new_learning_rate")
-      self._lr_update = tf.assign(self._lr, self._new_lr)
 
   @property
   def bn_update_ops(self):
     if self._bn_update_ops is None:
-      ops = []
-      # assert len(self._towers) == 4, "Number of towers less than 4."
-      for tt in self._towers:
-        assert len(tt.bn_update_ops) > 0, "BN updates not found."
-        ops.extend(tt.bn_update_ops)
-      assert len(ops) > 0, "BN updates not found."
-      self._bn_update_ops = tf.group(*ops)
-      log.info("Number of BN update ops {}".format(len(ops)), verbose=0)
+      bn_ops = tf.get_collection_ref(tf.GraphKeys.UPDATE_OPS)
+      log.info("BN update ops:")
+      [log.info(op) for op in bn_ops]
+      self._bn_update_ops = tf.group(*bn_ops)
+      log.info("Total number of BN updates: {}".format(len(bn_ops)))
     return self._bn_update_ops
 
   @property
   def global_step(self):
     return self._global_step
-
-  def assign_lr(self, session, lr_value):
-    """Assigns new learning rate."""
-    log.info("Adjusting learning rate to {}".format(lr_value))
-    session.run(self._lr_update, feed_dict={self._new_lr: lr_value})
 
   def infer_step(self, sess, inp=None):
     """Run inference."""
@@ -249,8 +236,9 @@ class MultiTowerModel(object):
       feed_data = {self.label: label}
     else:
       feed_data = None
-    results = sess.run([self.cross_ent, self.train_op, self.bn_update_ops],
-                       feed_dict=feed_data)
+    results = sess.run(
+        [self.cross_ent, self.train_op, self.bn_update_ops],
+        feed_dict=feed_data)
     return results[0]
 
   @property

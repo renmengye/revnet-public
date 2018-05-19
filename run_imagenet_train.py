@@ -38,12 +38,12 @@ import numpy as np
 import os
 import tensorflow as tf
 
+from google.protobuf.text_format import Merge, MessageToString
 from tqdm import tqdm
 
 from resnet.configs import get_config, get_config_from_json
-from resnet.data_tfrecord.imagenet_data import ImagenetData
-from resnet.data_tfrecord.image_processing import distorted_inputs
-from resnet.models import get_multi_gpu_model
+from resnet.data_tfrecord import get_data_inputs
+from resnet.models.model_factory import get_multi_gpu_model
 from resnet.utils import (ExperimentLogger, FixedLearnRateScheduler)
 from resnet.utils import logger, gen_id
 
@@ -74,8 +74,6 @@ def _get_config():
 
 def _get_model(config, inp, label, num_replica, num_pass, is_training):
   """Builds a model."""
-  use_nccl = config.model_class.endswith("-gpu")
-  multi_session = config.model_class.startswith("ms")
   with tf.name_scope("Train"):
     with tf.variable_scope("Model", reuse=None):
       with log.verbose_level(2):
@@ -87,20 +85,16 @@ def _get_model(config, inp, label, num_replica, num_pass, is_training):
             num_pass=num_pass,
             inp=inp,
             label=label,
-            batch_size=config.batch_size,
-            multi_session=multi_session,
-            use_nccl=use_nccl)
+            batch_size=config.batch_size)
 
 
 def _get_dataset(config):
   """Prepares a dataset input tensors."""
   num_preprocess_threads = FLAGS.num_preprocess_threads * FLAGS.num_gpu
-  dataset = ImagenetData(subset="train")
-  images, labels = distorted_inputs(
-      dataset,
-      batch_size=config.batch_size,
-      num_preprocess_threads=num_preprocess_threads)
-  return images, labels
+  trn_batch = get_data_inputs(
+      DATASET, FLAGS.data_dir, "train", True, config.batch_size,
+      DATASET).inputs(num_preprocess_threads=num_preprocess_threads)
+  return trn_batch['image'], trn_batch['label']
 
 
 def train_step(sess, model):
@@ -137,7 +131,9 @@ def train_model(exp_id, config, model, save_folder=None, logs_folder=None):
   log.info("Config: {}".format(config.__dict__))
   exp_logger = ExperimentLogger(logs_folder)
 
-  with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+  with tf.Session(
+      config=tf.ConfigProto(allow_soft_placement=True,
+                            allow_groth=True)) as sess:
 
     found_old_name = False
     if FLAGS.restore:
@@ -176,9 +172,9 @@ def train_model(exp_id, config, model, save_folder=None, logs_folder=None):
 
     # Count parameters.
     w_list = tf.trainable_variables()
-    num_params = np.array(
-        [np.prod(np.array([int(ss) for ss in w.get_shape()]))
-         for w in w_list]).sum()
+    num_params = np.array([
+        np.prod(np.array([int(ss) for ss in w.get_shape()])) for w in w_list
+    ]).sum()
     log.info("Number of parameters {}".format(num_params))
 
     max_train_iter = config.max_train_iter

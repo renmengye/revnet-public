@@ -1,0 +1,35 @@
+syntax = "proto2";
+
+package resnet.configs;
+
+message ResnetModelConfig {
+    optional int32 input_height = 1;
+    optional int32 input_width = 2;
+    optional int32 num_channels = 3 [default = 3];
+    optional int32 num_classes = 4;
+    repeated int32 num_residual_units = 5;
+    repeated int32 num_filters = 6;
+    repeated int32 strides = 7;
+    repeated int32 dilations = 8;
+    optional int32 init_stride = 9;
+    optional bool init_max_pool = 10;
+    optional int32 init_filter_size = 11;
+    optional bool use_bottleneck = 12;
+    optional bool build_classifier = 13;
+    optional float weight_decay = 14;
+    optional string data_format = 15 [default = "NHWC"];
+    optional float dropout = 16 [default = 0.0];
+
+    optional string optimizer_type = 1001 [default = "momentum"];
+    optional float learn_rate = 1002;
+    optional float momentum = 1003;
+    optional int32 train_batch_size = 1004;
+    optional int32 eval_batch_size = 1005;
+    optional int32 max_train_iter = 1006;
+    repeated int32 learn_rate_decay_steps = 1007;
+    repeated string learn_rate_scheduler_type = 1008;
+    repeated float learn_rate_list = 1009;
+    optional int32 seed = 1010 [default = 1234];
+
+    optional string version = 2000 [default = "v1"];
+}

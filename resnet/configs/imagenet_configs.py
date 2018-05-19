@@ -45,6 +45,12 @@ class ResNet50Config(object):
     self.filter_initialization = "normal"
 
 
+class ResNet50V2Config(ResNet50Config):
+
+  def __init__(self):
+    self.version = "v2"
+
+
 @RegisterConfig("resnet-101")
 class ResNet101Config(ResNet50Config):
 

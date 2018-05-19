@@ -1,5 +1,5 @@
 # Set up absolute path for dataset root here.
-DATA_ROOT=''
+DATA_ROOT='/hd/data'
 
 # Set up absolute path for training logs path here.
 LOGS_DIR=''
@@ -18,8 +18,8 @@ LOCAL_LOGS_DIR='logs'
 LOCAL_SAVE_DIR='results'
 
 # Put 'yes' here to download CIFAR and ImageNet datasets.
-DOWNLOAD_CIFAR='no'
-DOWNLOAD_IMAGENET='yes'
+DOWNLOAD_CIFAR='yes'
+DOWNLOAD_IMAGENET='no'
 
 if [ ! -d $DATA_ROOT ]; then
   mkdir -p $DATA_ROOT

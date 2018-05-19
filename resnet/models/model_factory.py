@@ -6,6 +6,7 @@ import tensorflow as tf
 
 from resnet.utils import logger
 from collections import namedtuple
+from resnet.configs.resnet_model_config_pb2 import ResnetModelConfig
 from resnet.models.multi_tower_model import MultiTowerModel
 from resnet.models.multi_pass_model import MultiPassModel
 
@@ -47,10 +48,8 @@ def get_model(model_name,
   Returns:
     model: A Model instance.
   """
-  config_dict = dict(config.__dict__)
-  config_copy = json.loads(
-      json.dumps(config_dict),
-      object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+  config_copy = ResnetModelConfig()
+  config_copy.CopyFrom(config)
   key = model_name
   if batch_size is not None:
     batch_size = batch_size // num_pass // num_node
@@ -119,10 +118,8 @@ def get_multi_gpu_model(model_name,
   Returns:
     model: A Model instance.
   """
-  config_dict = dict(config.__dict__)
-  config_copy = json.loads(
-      json.dumps(config_dict),
-      object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+  config_copy = ResnetModelConfig()
+  config_copy.CopyFrom(config)
   key = model_name
   if key in MODEL_REGISTRY:
     model_cls = MODEL_REGISTRY[key]

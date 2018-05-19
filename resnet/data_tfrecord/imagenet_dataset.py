@@ -21,13 +21,15 @@ from __future__ import print_function
 
 
 from resnet.data_tfrecord.dataset import Dataset
+from resnet.data_tfrecord.data_factory import RegisterDataset
 
 
-class ImagenetData(Dataset):
+@RegisterDataset("imagenet")
+class ImagenetDataset(Dataset):
   """ImageNet data set."""
 
-  def __init__(self, subset):
-    super(ImagenetData, self).__init__('ImageNet', subset)
+  def __init__(self, subset, data_dir):
+    super(ImagenetDataset, self).__init__('ImageNet', subset, data_dir)
 
   def num_classes(self):
     """Returns the number of classes in the data set."""

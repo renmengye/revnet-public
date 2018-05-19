@@ -71,7 +71,7 @@ tf.app.flags.DEFINE_integer('input_queue_memory_factor', 16,
                             """comments in code for more details.""")
 
 
-def inputs(dataset, cycle=False, batch_size=None, num_preprocess_threads=None):
+def inputs(dataset, batch_size=None, num_preprocess_threads=None):
   """Generate batches of ImageNet images for evaluation.
 
   Use this function as the inputs for evaluating a network.
@@ -99,7 +99,6 @@ def inputs(dataset, cycle=False, batch_size=None, num_preprocess_threads=None):
     images, labels = batch_inputs(
         dataset,
         batch_size,
-        cycle=cycle,
         train=False,
         num_preprocess_threads=num_preprocess_threads,
         num_readers=1)
@@ -410,7 +409,7 @@ def batch_inputs(dataset,
                  batch_size,
                  train,
                  num_preprocess_threads=None,
-                 cycle=True,
+                 num_epochs=None,
                  num_readers=1,
                  seed=0):
   """Contruct batches of training or evaluation examples from the image dataset.
@@ -434,11 +433,6 @@ def batch_inputs(dataset,
     data_files = dataset.data_files()
     if data_files is None:
       raise ValueError('No data files found for this dataset')
-
-    if cycle:
-      num_epochs = None
-    else:
-      num_epochs = 1
 
     # Create filename_queue
     if train:

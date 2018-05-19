@@ -8,14 +8,14 @@ import tensorflow as tf
 from collections import namedtuple
 from resnet.models.nnlib import concat as _concat
 from resnet.models.model_factory import RegisterModel
-from resnet.models.resnet_model import ResNetModel
+from resnet.models.resnet_model import ResnetModel
 from resnet.utils import logger
 
 log = logger.get()
 
 
 @RegisterModel("revnet")
-class RevNetModel(ResNetModel):
+class RevnetModel(ResnetModel):
 
   def __init__(self,
                config,
@@ -290,10 +290,10 @@ class RevNetModel(ResNetModel):
           return None
         return v
 
-      b1w_list = filter(lambda x: x is not None,
-                        map(try_get_variable, b1w_names))
-      b2w_list = filter(lambda x: x is not None,
-                        map(try_get_variable, b2w_names))
+      b1w_list = filter(lambda x: x is not None, map(try_get_variable,
+                                                     b1w_names))
+      b2w_list = filter(lambda x: x is not None, map(try_get_variable,
+                                                     b2w_names))
 
     dd1 = tf.gradients(y2_, [y1_] + gw_list, dy2, gate_gradients=True)
     dy2_y1 = dd1[0]
