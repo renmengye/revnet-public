@@ -17,7 +17,7 @@ init_max_pool: false
 init_filter_size: 7
 use_bottleneck: false
 build_classifier: true
-weight_decay: 5e-4
+weight_decay: 1e-4
 data_format: "NCHW"
 optimizer_type: "momentum"
 learn_rate: 1e-1
@@ -31,4 +31,4 @@ learn_rate_scheduler_type: "fixed"
 learn_rate_list: 1e-2
 learn_rate_list: 1e-3
 seed: 1234
-version: "v1"
+version: "v2"

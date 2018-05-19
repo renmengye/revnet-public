@@ -275,9 +275,9 @@ def main():
       acc = train_model(
           sess, exp_id, config, model, model_val, save_folder=None)
 
-    val_acc, _ = evaluate(sess, model_val, 50)
-    test_acc, _ = evaluate(sess, model_test, 100)
-
+    val_acc = evaluate(sess, model_val, 50)
+    test_acc = evaluate(sess, model_test, 100)
+    
   log.info("Final val accuracy = {:.3f}".format(val_acc * 100))
   log.info("Final test accuracy = {:.3f}".format(test_acc * 100))
 
