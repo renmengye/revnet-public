@@ -57,7 +57,7 @@ flags.DEFINE_string("id", None, "Experiment ID.")
 flags.DEFINE_string("results", "./results/cifar", "Saving folder.")
 flags.DEFINE_string("logs", "./logs/public", "Logging folder.")
 flags.DEFINE_string("model", "resnet-32-v1", "Model type.")
-flags.DEFINE_bool("validation", False, "Whether run validation set.")
+flags.DEFINE_bool("validation", True, "Whether run validation set.")
 flags.DEFINE_bool("restore", False, "Whether restore model.")
 flags.DEFINE_integer("num_gpu", 1, "Number of GPUs")
 flags.DEFINE_bool("eval", False, "Evaluation only")
@@ -189,15 +189,23 @@ def main():
     dataset_name = exp_id.split("_")[1]
 
   # Initializes variables.
-  with tf.Graph().as_default(), tf.Session() as sess:
+  sconfig = tf.ConfigProto()
+  sconfig.gpu_options.allow_growth = True
+  with tf.Graph().as_default(), tf.Session(config=sconfig) as sess:
     # Configures dataset objects.
     log.info("Building dataset")
     data_dir = os.path.join(FLAGS.data_root, FLAGS.dataset + "-tf")
+    if FLAGS.validation:
+      train_split = "train"
+      val_split = "val"
+    else:
+      train_split = "trainval"
+      val_split = "test"
     trn_data = get_data_inputs(
         FLAGS.dataset,
         "cifar",
         data_dir,
-        "train",
+        train_split,
         True,
         batch_size=config.train_batch_size,
         data_format=config.data_format)
@@ -206,7 +214,7 @@ def main():
         FLAGS.dataset,
         "cifar",
         data_dir,
-        "validation",
+        val_split,
         False,
         batch_size=config.eval_batch_size,
         data_format=config.data_format)
@@ -277,7 +285,7 @@ def main():
 
     val_acc = evaluate(sess, model_val, 50)
     test_acc = evaluate(sess, model_test, 100)
-    
+
   log.info("Final val accuracy = {:.3f}".format(val_acc * 100))
   log.info("Final test accuracy = {:.3f}".format(test_acc * 100))
 
