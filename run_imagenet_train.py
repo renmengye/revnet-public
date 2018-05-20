@@ -140,10 +140,10 @@ def train_model(exp_id, config, model, save_folder=None, logs_folder=None):
   log.info("Config: {}".format(config.__dict__))
   exp_logger = ExperimentLogger(logs_folder)
 
-  with tf.Session(
-      config=tf.ConfigProto(allow_soft_placement=True,
-                            allow_groth=True)) as sess:
-
+  sconfig = tf.ConfigProto()
+  sconfig.allow_soft_placement = True
+  sconfig.gpu_options.allow_growth = True
+  with tf.Session(config=sconfig) as sess:
     found_old_name = False
     if FLAGS.restore:
       ckpt = tf.train.latest_checkpoint(save_folder)
