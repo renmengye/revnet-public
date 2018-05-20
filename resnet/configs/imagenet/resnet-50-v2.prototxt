@@ -9,7 +9,7 @@ num_residual_units: 3
 num_filters: 64
 num_filters: 64
 num_filters: 128
-num_filters: 128
+num_filters: 256
 num_filters: 512
 strides: 1
 strides: 2
