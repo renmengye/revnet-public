@@ -33,7 +33,6 @@ Flags:
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import json
 import numpy as np
 import os
 import tensorflow as tf
@@ -67,9 +66,19 @@ DATASET = "imagenet"
 def _get_config():
   # Manually set config.
   if FLAGS.config is not None:
-    return get_config_from_json(FLAGS.config)
+    config_file = FLAGS.config
   else:
-    return get_config(FLAGS.model)
+    if FLAGS.restore:
+      save_folder = os.path.realpath(
+          os.path.abspath(os.path.join(FLAGS.results, FLAGS.id)))
+      config_file = os.path.join(save_folder, "conf.prototxt")
+    else:
+      config_file = os.path.join('resnet/configs/imagenet/{}.prototxt'.format(
+          FLAGS.model))
+  config = ResnetModelConfig()
+  print(config_file)
+  Merge(open(config_file).read(), config)
+  return config
 
 
 def _get_model(config, inp, label, num_replica, num_pass, is_training):

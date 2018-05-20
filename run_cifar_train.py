@@ -17,7 +17,7 @@ python run_cifar_train.py    --model           [MODEL NAME]          \
 
 Flags:
   --model: See resnet/configs/cifar_exp_config.py. Default resnet-32.
-  --config: Not using the pre-defined configs above, specify the JSON file
+  --config: Not using the pre-defined configs above, specify the PROTOTXT file
   that contains model configurations.
   --dataset: Dataset name. Available options are: 1) cifar-10 2) cifar-100.
   --data_folder: Path to data folder, default is data/{DATASET}.
@@ -29,7 +29,6 @@ Flags:
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import json
 import numpy as np
 import os
 import six
@@ -128,7 +127,7 @@ def save(sess, saver, global_step, config, save_folder):
   """Snapshots a model."""
   if not os.path.isdir(save_folder):
     os.makedirs(save_folder)
-  config_file = os.path.join(save_folder, "conf.json")
+  config_file = os.path.join(save_folder, "conf.prototxt")
   with open(config_file, "w") as f:
     f.write(MessageToString(config))
   log.info("Saving to {}".format(save_folder))
