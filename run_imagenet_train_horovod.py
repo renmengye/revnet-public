@@ -306,7 +306,10 @@ def main():
 
       log.info("Experiment ID {}".format(exp_id))
       it = tqdm(
-          range(niter_start, config.max_train_iter), desc="train", ncols=0)
+          range(niter_start, config.max_train_iter),
+          desc="train",
+          ncols=0,
+          disbale=hvd.local_rank() != 0)
       for niter in it:
         # Perform synchronous training.
         ce, _ = mon_sess.run([model.cross_ent, model.train_op])
