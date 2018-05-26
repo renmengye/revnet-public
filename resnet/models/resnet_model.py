@@ -72,8 +72,8 @@ class ResnetModel(object):
     # Input.
     if inp is None:
       x = tf.placeholder(
-          dtype, [batch_size, config.height, config.width, config.num_channels],
-          "x")
+          dtype, [batch_size, config.height, config.width,
+                  config.num_channels], "x")
     else:
       x = inp
 
@@ -110,11 +110,11 @@ class ResnetModel(object):
 
     global_step = tf.get_variable(
         "global_step", [],
-        initializer=tf.constant_initializer(0.0),
+        initializer=tf.constant_initializer(0),
         trainable=False,
-        dtype=dtype)
+        dtype=tf.int64)
     lr = tf.train.piecewise_constant(
-        global_step, [float(ss) for ss in self.config.learn_rate_decay_steps],
+        global_step, self.config.learn_rate_decay_steps,
         [self.config.learn_rate] + list(self.config.learn_rate_list))
     self._lr = lr
     self._grads_and_vars = self._compute_gradients(cost)
@@ -287,13 +287,13 @@ class ResnetModel(object):
     if in_filter < out_filter:
       with tf.variable_scope("pad"):
         if self.config.data_format == "NHWC":
-          x = tf.pad(x,
-                     [[0, 0], [0, 0], [0, 0], [(out_filter - in_filter) // 2,
-                                               (out_filter - in_filter) // 2]])
+          x = tf.pad(x, [[0, 0], [0, 0], [0, 0],
+                         [(out_filter - in_filter) // 2,
+                          (out_filter - in_filter) // 2]])
         else:
-          x = tf.pad(x,
-                     [[0, 0], [(out_filter - in_filter) // 2,
-                               (out_filter - in_filter) // 2], [0, 0], [0, 0]])
+          x = tf.pad(x, [[0, 0], [(out_filter - in_filter) // 2,
+                                  (out_filter - in_filter) // 2], [0, 0],
+                         [0, 0]])
     return x
 
   def _residual_inner(self,
@@ -375,7 +375,7 @@ class ResnetModel(object):
 
   def _possible_bottleneck_downsample(self, x, in_filter, out_filter, stride):
     """Downsample projection layer, if the filter size does not match."""
-    if stride[1] > 1 or in_filter != out_filter:
+    if stride[2] > 1 or in_filter != out_filter:
       x = self._conv("project", x, 1, in_filter, out_filter, stride)
     return x
 

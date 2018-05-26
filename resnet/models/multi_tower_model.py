@@ -33,9 +33,9 @@ class MultiTowerModel(object):
 
     # Input.
     if inp is None:
-      x = tf.placeholder(
-          self.dtype,
-          [batch_size, config.height, config.width, config.num_channel])
+      x = tf.placeholder(self.dtype, [
+          batch_size, config.height, config.width, config.num_channel
+      ])
     else:
       x = inp
     if label is None:
@@ -153,9 +153,8 @@ class MultiTowerModel(object):
               if len(wd_losses) > 0:
                 log.info("Replica {}, Weight decay variables: {}".format(
                     ii, wd_losses))
-                log.info(
-                    "Replica {}, Number of weight decay variables: {}".format(
-                        ii, len(wd_losses)))
+                log.info("Replica {}, Number of weight decay variables: {}".
+                         format(ii, len(wd_losses)))
               tower_grads_and_vars.append(
                   tower_._compute_gradients(tower_.cost))
 
@@ -181,12 +180,11 @@ class MultiTowerModel(object):
         tf.get_variable_scope()._reuse = None
         global_step = tf.get_variable(
             "global_step", [],
-            initializer=tf.constant_initializer(0.0),
+            initializer=tf.constant_initializer(0),
             trainable=False,
-            dtype=self.dtype)
+            dtype=tf.int64)
         self._lr = tf.train.piecewise_constant(
-            global_step,
-            [float(ss) for ss in self.config.learn_rate_decay_steps],
+            global_step, self.config.learn_rate_decay_steps,
             [self.config.learn_rate] + list(self.config.learn_rate_list))
         self._global_step = global_step
         opt = tf.train.MomentumOptimizer(self.lr, momentum=self.config.momentum)

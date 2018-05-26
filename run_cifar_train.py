@@ -17,7 +17,7 @@ python run_cifar_train.py    --model           [MODEL NAME]          \
 
 Flags:
   --model: See resnet/configs/cifar_exp_config.py. Default resnet-32.
-  --config: Not using the pre-defined configs above, specify the JSON file
+  --config: Not using the pre-defined configs above, specify the PROTOTXT file
   that contains model configurations.
   --dataset: Dataset name. Available options are: 1) cifar-10 2) cifar-100.
   --data_folder: Path to data folder, default is data/{DATASET}.
@@ -30,7 +30,6 @@ Flags:
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import json
 import numpy as np
 import os
 import six
@@ -51,17 +50,17 @@ from resnet.utils.gen_id import gen_id
 log = get_logger()
 
 flags = tf.flags
+flags.DEFINE_bool("eval", False, "Evaluation only")
+flags.DEFINE_bool("restore", False, "Whether restore model.")
+flags.DEFINE_bool("validation", True, "Whether run validation set.")
+flags.DEFINE_integer("num_gpu", 1, "Number of GPUs")
 flags.DEFINE_string("config", None, "Manually defined config file.")
 flags.DEFINE_string("data_root", "./data", "Dataset root.")
 flags.DEFINE_string("dataset", "cifar-10", "Dataset name.")
 flags.DEFINE_string("id", None, "Experiment ID.")
-flags.DEFINE_string("results", "./results/cifar", "Saving folder.")
 flags.DEFINE_string("logs", "./logs/public", "Logging folder.")
 flags.DEFINE_string("model", "resnet-32-v1", "Model type.")
-flags.DEFINE_bool("validation", True, "Whether run validation set.")
-flags.DEFINE_bool("restore", False, "Whether restore model.")
-flags.DEFINE_integer("num_gpu", 1, "Number of GPUs")
-flags.DEFINE_bool("eval", False, "Evaluation only")
+flags.DEFINE_string("results", "./results/cifar", "Saving folder.")
 FLAGS = flags.FLAGS
 
 
@@ -75,8 +74,8 @@ def _get_config():
           os.path.abspath(os.path.join(FLAGS.results, FLAGS.id)))
       config_file = os.path.join(save_folder, "conf.prototxt")
     else:
-      config_file = os.path.join('resnet/configs/cifar/{}.prototxt'.format(
-          FLAGS.model))
+      config_file = os.path.join(
+          'resnet/configs/cifar/{}.prototxt'.format(FLAGS.model))
   config = ResnetModelConfig()
   print(config_file)
   Merge(open(config_file).read(), config)
@@ -97,15 +96,16 @@ def _get_model(config,
       "label": label,
       "batch_size": bsize
   }
-  if num_replica == 1:
-    with tf.name_scope(name_scope):
-      with tf.variable_scope("Model", reuse=reuse):
-        return get_model('resnet', config, **kwargs)
-  elif num_replica > 1:
-    kwargs["num_replica"] = num_replica
-    with tf.name_scope(name_scope):
-      with tf.variable_scope("Model", reuse=reuse):
-        return get_multi_gpu_model('resnet', config, **kwargs)
+  with log.verbose_level(2):
+    if num_replica == 1:
+      with tf.name_scope(name_scope):
+        with tf.variable_scope("Model", reuse=reuse):
+          return get_model('resnet', config, **kwargs)
+    elif num_replica > 1:
+      kwargs["num_replica"] = num_replica
+      with tf.name_scope(name_scope):
+        with tf.variable_scope("Model", reuse=reuse):
+          return get_multi_gpu_model("resnet", config, **kwargs)
 
 
 def train_step(sess, model):
@@ -129,12 +129,36 @@ def save(sess, saver, global_step, config, save_folder):
   """Snapshots a model."""
   if not os.path.isdir(save_folder):
     os.makedirs(save_folder)
-  config_file = os.path.join(save_folder, "conf.json")
+  config_file = os.path.join(save_folder, "conf.prototxt")
   with open(config_file, "w") as f:
     f.write(MessageToString(config))
   log.info("Saving to {}".format(save_folder))
   saver.save(
       sess, os.path.join(save_folder, "model.ckpt"), global_step=global_step)
+
+
+def _get_exp_logger(sess, log_folder):
+  """Gets a TensorBoard logger."""
+  with tf.name_scope('Summary'):
+    writer = tf.summary.FileWriter(log_folder)
+
+  class ExperimentLogger():
+
+    def log(self, niter, name, value):
+      """Logs training cross entropy."""
+      summary = tf.Summary()
+      summary.value.add(tag=name, simple_value=value)
+      writer.add_summary(summary, niter)
+
+    def flush(self):
+      """Flushes results to disk."""
+      writer.flush()
+
+    def close(self):
+      """Closes writer."""
+      writer.close()
+
+  return ExperimentLogger()
 
 
 def train_model(sess, exp_id, config, model, model_val, save_folder=None):
@@ -149,15 +173,18 @@ def train_model(sess, exp_id, config, model, model_val, save_folder=None):
   Returns:
       acc: Final test accuracy
   """
+  log.info("Config: {}".format(MessageToString(config)))
+  exp_logger = _get_exp_logger(sess, save_folder)
+
   niter_start = int(model.global_step.eval())
   w_list = tf.trainable_variables()
   log.info("Model initialized.")
-  num_params = np.array([
-      np.prod(np.array([int(ss) for ss in w.get_shape()])) for w in w_list
-  ]).sum()
+  num_params = np.array(
+      [np.prod(np.array([int(ss) for ss in w.get_shape()]))
+       for w in w_list]).sum()
   log.info("Number of parameters {}".format(num_params))
   log.info("Experiment ID {}".format(exp_id))
-  it = tqdm(range(niter_start, config.max_train_iter), desc='train', ncols=0)
+  it = tqdm(range(niter_start, config.max_train_iter), desc="train", ncols=0)
   trn_acc = 0.0
   val_acc = 0.0
   for niter in it:
@@ -166,6 +193,9 @@ def train_model(sess, exp_id, config, model, model_val, save_folder=None):
     if (niter + 1) % 1000 == 0 or niter == 0:
       trn_acc = evaluate(sess, model, 50)
       val_acc = evaluate(sess, model_val, 50)
+      exp_logger.log(niter + 1, "train acc", trn_acc)
+      exp_logger.log(niter + 1, "val acc", val_acc)
+      exp_logger.flush()
       print()
 
     if (niter + 1) % 10 == 0 or niter == 0:
@@ -174,7 +204,10 @@ def train_model(sess, exp_id, config, model, model_val, save_folder=None):
           trn_acc="{:.3f}".format(trn_acc * 100.0),
           val_acc="{:.3f}".format(val_acc * 100.0),
           lr="{:.3e}".format(model.lr.eval()))
+      exp_logger.log(niter + 1, "train ce", ce)
+      exp_logger.flush()
   acc = evaluate(sess, model_val, 50)
+  exp_logger.close()
   return acc
 
 
@@ -287,8 +320,10 @@ def main():
     val_acc = evaluate(sess, model_val, 50)
     test_acc = evaluate(sess, model_test, 100)
 
-  log.info("Final val accuracy = {:.3f}".format(val_acc * 100))
-  log.info("Final test accuracy = {:.3f}".format(test_acc * 100))
+    coord.request_stop()
+    coord.join(threads)
+    log.info("Final val accuracy = {:.3f}".format(val_acc * 100))
+    log.info("Final test accuracy = {:.3f}".format(test_acc * 100))
 
 
 if __name__ == "__main__":

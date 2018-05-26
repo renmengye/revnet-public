@@ -36,6 +36,7 @@ from __future__ import (absolute_import, division, print_function,
 import numpy as np
 import os
 import tensorflow as tf
+import horovod.tensorflow as hvd
 
 from google.protobuf.text_format import Merge, MessageToString
 from tqdm import tqdm
@@ -45,7 +46,7 @@ from resnet.data_tfrecord.data_factory import get_data_inputs
 from resnet.data_tfrecord.imagenet_dataset import ImagenetDataset
 from resnet.data_tfrecord.imagenet_input_pipeline import ImagenetInputPipeline
 from resnet.models.resnet_model import ResnetModel
-from resnet.models.model_factory import get_multi_gpu_model, get_model
+from resnet.models.model_factory import get_model
 from resnet.utils.logger import get as get_logger
 from resnet.utils.gen_id import gen_id
 
@@ -84,23 +85,36 @@ def _get_config():
   return config
 
 
-def _get_model(config, inp, label, bsize, num_replica, num_pass, is_training):
+def _get_model(config, inp, label, bsize, is_training):
   """Builds a model."""
   kwargs = {
       "is_training": is_training,
       "inp": inp,
       "label": label,
       "batch_size": bsize,
+      "inference_only": True
   }
   with tf.name_scope("Train"):
     with tf.variable_scope("Model", reuse=None):
       with log.verbose_level(2):
-        if num_replica > 1:
-          kwargs["num_pass"] = num_pass
-          kwargs["num_replica"] = num_replica
-          return get_multi_gpu_model("resnet", config, **kwargs)
-        else:
-          return get_model("resnet", config, **kwargs)
+        m = get_model("resnet", config, **kwargs)
+
+  global_step = tf.get_variable(
+      "global_step", [],
+      initializer=tf.constant_initializer(0),
+      trainable=False,
+      dtype=tf.int64)
+  lr = tf.train.piecewise_constant(
+      global_step, config.learn_rate_decay_steps,
+      [config.learn_rate] + list(config.learn_rate_list))
+  m._lr = lr
+  m._global_step = global_step
+  opt = tf.train.MomentumOptimizer(lr, 0.9)
+  opt = hvd.DistributedOptimizer(opt)
+  hooks = [hvd.BroadcastGlobalVariablesHook(0)]
+  m._train_op = opt.minimize(m.cost, global_step=global_step, name="train_step")
+  tf.summary.scalar("train ce", m.cross_ent)
+  return m, hooks
 
 
 def train_step(sess, model):
@@ -209,6 +223,7 @@ def train_model(sess, exp_id, config, model, save_folder=None):
 def main():
   # Loads parammeters.
   config = _get_config()
+  hvd.init()
 
   if FLAGS.id is None:
     exp_id = "exp_" + DATASET + "_" + FLAGS.model
@@ -225,9 +240,7 @@ def main():
     save_folder = None
 
   sconfig = tf.ConfigProto()
-  sconfig.allow_soft_placement = True
-  sconfig.gpu_options.allow_growth = True
-  with tf.Graph().as_default(), tf.Session(config=sconfig) as sess:
+  with tf.Graph().as_default():
     np.random.seed(0)
     tf.set_random_seed(1234)
 
@@ -241,21 +254,70 @@ def main():
         True,
         batch_size=config.train_batch_size,
         data_format=config.data_format)
-    trn_batch = trn_data.inputs()
+    trn_batch = trn_data.inputs(seed=hvd.local_rank() * 1000)
+    # rnd = np.random.RandomState(hvd.local_rank() * 1000)
+    # trn_batch = {
+    #     "image":
+    #     tf.constant(
+    #         np.random.uniform(-1, 1, [64, 3, 224, 224]).astype(np.float32)),
+    #     "label":
+    #     tf.constant(np.random.uniform(0, 10, [64]).astype(np.int32))
+    # }
 
     # Builds models.
     log.info("Building models")
-    model = _get_model(
+    model, hooks = _get_model(
         config,
         trn_batch["image"],
         tf.squeeze(trn_batch["label"]),
         config.train_batch_size,
-        num_replica=FLAGS.num_gpu,
-        num_pass=FLAGS.num_pass,
         is_training=True)
 
-    # Trains a model.
-    train_model(sess, exp_id, config, model, save_folder=save_folder)
+    # Count parameters.
+    w_list = tf.trainable_variables()
+    num_params = np.array(
+        [np.prod(np.array([int(ss) for ss in w.get_shape()]))
+         for w in w_list]).sum()
+    log.info("Number of parameters {}".format(num_params))
+
+    sconfig = tf.ConfigProto()
+    sconfig.gpu_options.visible_device_list = str(hvd.local_rank())
+    sconfig.gpu_options.allow_growth = True
+    summary_op = tf.summary.merge_all()
+    summary_hook = tf.train.SummarySaverHook(
+        save_steps=10, output_dir=save_folder, summary_op=summary_op)
+
+    log.info("Saving to {}".format(save_folder))
+    with tf.train.MonitoredTrainingSession(
+        checkpoint_dir=save_folder,
+        config=sconfig,
+        hooks=hooks + [summary_hook]) as mon_sess:
+
+      log.info("Config: {}".format(MessageToString(config)))
+      if str(hvd.local_rank()) == "0":
+        exp_logger = _get_exp_logger(mon_sess, save_folder)
+
+      max_train_iter = config.max_train_iter
+      niter_start = int(mon_sess.run(model.global_step))
+
+      # Add upper bound to the number of steps.
+      if FLAGS.max_num_steps > 0:
+        max_train_iter = min(max_train_iter, niter_start + FLAGS.max_num_steps)
+
+      log.info("Experiment ID {}".format(exp_id))
+      it = tqdm(
+          range(niter_start, config.max_train_iter),
+          desc="train",
+          ncols=0,
+          disbale=hvd.local_rank() != 0)
+      for niter in it:
+        # Perform synchronous training.
+        ce, _ = mon_sess.run([model.cross_ent, model.train_op])
+        if ((niter + 1) % 10 == 0 or
+            niter == 0) and str(hvd.local_rank()) == "0":
+          exp_logger.log(niter + 1, "train ce", ce)
+          exp_logger.flush()
+          it.set_postfix(ce="{:.3e}".format(ce))
 
 
 if __name__ == "__main__":
