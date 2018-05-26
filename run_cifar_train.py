@@ -13,7 +13,7 @@ python run_cifar_train.py    --model           [MODEL NAME]          \
                              --no_validation                         \
                              --logs            [LOGS FOLDER]         \
                              --results         [SAVE FOLDER]         \
-                             --gpu             [GPU ID]
+                             --num_gpu         [NUM GPU]
 
 Flags:
   --model: See resnet/configs/cifar_exp_config.py. Default resnet-32.
@@ -25,6 +25,7 @@ Flags:
   --no_validation: Evaluating experiments on test set.
   --logs: Path to logs folder, default is logs/default.
   --results: Path to save folder, default is results.
+  --num_gpu: Number of GPUs.
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
@@ -197,7 +198,7 @@ def main():
     data_dir = os.path.join(FLAGS.data_root, FLAGS.dataset + "-tf")
     if FLAGS.validation:
       train_split = "train"
-      val_split = "val"
+      val_split = "validation"
     else:
       train_split = "trainval"
       val_split = "test"

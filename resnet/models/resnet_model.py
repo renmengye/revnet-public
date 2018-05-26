@@ -223,10 +223,11 @@ class ResnetModel(object):
     # Make a single tensor.
     if type(h) == tuple:
       h = concat(h, axis=3)
-
-    with tf.variable_scope("unit_last"):
-      h = self._batch_norm("final_bn", h)
-      h = self._relu("final_relu", h)
+    
+    if self.config.version == "v2":
+        with tf.variable_scope("unit_last"):
+          h = self._batch_norm("final_bn", h)
+          h = self._relu("final_relu", h)
 
     h = self._global_avg_pool(h)
 
@@ -265,7 +266,7 @@ class ResnetModel(object):
     else:
       raise ValueError("Unknown data format")
 
-  def _batch_norm(self, name, x, add_ops=True):
+  def _batch_norm(self, name, x):
     """Batch normalization."""
     bn = tf.contrib.layers.batch_norm(
         x,

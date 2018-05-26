@@ -1,5 +1,5 @@
 # Set up absolute path for dataset root here.
-DATA_ROOT='/hd/data'
+DATA_ROOT='/mnt/hd/data'
 
 # Set up absolute path for training logs path here.
 LOGS_DIR=''
