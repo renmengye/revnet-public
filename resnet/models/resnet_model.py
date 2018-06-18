@@ -72,8 +72,8 @@ class ResnetModel(object):
     # Input.
     if inp is None:
       x = tf.placeholder(
-          dtype, [batch_size, config.height, config.width,
-                  config.num_channels], "x")
+          dtype, [batch_size, config.height, config.width, config.num_channels],
+          "x")
     else:
       x = inp
 
@@ -223,11 +223,11 @@ class ResnetModel(object):
     # Make a single tensor.
     if type(h) == tuple:
       h = concat(h, axis=3)
-    
+
     if self.config.version == "v2":
-        with tf.variable_scope("unit_last"):
-          h = self._batch_norm("final_bn", h)
-          h = self._relu("final_relu", h)
+      with tf.variable_scope("unit_last"):
+        h = self._batch_norm("final_bn", h)
+        h = self._relu("final_relu", h)
 
     h = self._global_avg_pool(h)
 
@@ -287,13 +287,13 @@ class ResnetModel(object):
     if in_filter < out_filter:
       with tf.variable_scope("pad"):
         if self.config.data_format == "NHWC":
-          x = tf.pad(x, [[0, 0], [0, 0], [0, 0],
-                         [(out_filter - in_filter) // 2,
-                          (out_filter - in_filter) // 2]])
+          x = tf.pad(x,
+                     [[0, 0], [0, 0], [0, 0], [(out_filter - in_filter) // 2,
+                                               (out_filter - in_filter) // 2]])
         else:
-          x = tf.pad(x, [[0, 0], [(out_filter - in_filter) // 2,
-                                  (out_filter - in_filter) // 2], [0, 0],
-                         [0, 0]])
+          x = tf.pad(x,
+                     [[0, 0], [(out_filter - in_filter) // 2,
+                               (out_filter - in_filter) // 2], [0, 0], [0, 0]])
     return x
 
   def _residual_inner(self,
@@ -377,6 +377,8 @@ class ResnetModel(object):
     """Downsample projection layer, if the filter size does not match."""
     if stride[2] > 1 or in_filter != out_filter:
       x = self._conv("project", x, 1, in_filter, out_filter, stride)
+      if self.config.version == "v1":
+        x = self._batch_norm("project_bn", x)
     return x
 
   def _bottleneck_residual(self,

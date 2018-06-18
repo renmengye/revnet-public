@@ -74,8 +74,8 @@ def _get_config():
           os.path.abspath(os.path.join(FLAGS.results, FLAGS.id)))
       config_file = os.path.join(save_folder, "conf.prototxt")
     else:
-      config_file = os.path.join(
-          'resnet/configs/cifar/{}.prototxt'.format(FLAGS.model))
+      config_file = os.path.join('resnet/configs/cifar/{}.prototxt'.format(
+          FLAGS.model))
   config = ResnetModelConfig()
   print(config_file)
   Merge(open(config_file).read(), config)
@@ -174,14 +174,16 @@ def train_model(sess, exp_id, config, model, model_val, save_folder=None):
       acc: Final test accuracy
   """
   log.info("Config: {}".format(MessageToString(config)))
-  exp_logger = _get_exp_logger(sess, save_folder)
+  saver = tf.train.Saver()
+  if save_folder is not None:
+    exp_logger = _get_exp_logger(sess, save_folder)
 
   niter_start = int(model.global_step.eval())
   w_list = tf.trainable_variables()
   log.info("Model initialized.")
-  num_params = np.array(
-      [np.prod(np.array([int(ss) for ss in w.get_shape()]))
-       for w in w_list]).sum()
+  num_params = np.array([
+      np.prod(np.array([int(ss) for ss in w.get_shape()])) for w in w_list
+  ]).sum()
   log.info("Number of parameters {}".format(num_params))
   log.info("Experiment ID {}".format(exp_id))
   it = tqdm(range(niter_start, config.max_train_iter), desc="train", ncols=0)
@@ -193,9 +195,10 @@ def train_model(sess, exp_id, config, model, model_val, save_folder=None):
     if (niter + 1) % 1000 == 0 or niter == 0:
       trn_acc = evaluate(sess, model, 50)
       val_acc = evaluate(sess, model_val, 50)
-      exp_logger.log(niter + 1, "train acc", trn_acc)
-      exp_logger.log(niter + 1, "val acc", val_acc)
-      exp_logger.flush()
+      if save_folder is not None:
+        exp_logger.log(niter + 1, "train acc", trn_acc)
+        exp_logger.log(niter + 1, "val acc", val_acc)
+        exp_logger.flush()
       print()
 
     if (niter + 1) % 10 == 0 or niter == 0:
@@ -204,8 +207,14 @@ def train_model(sess, exp_id, config, model, model_val, save_folder=None):
           trn_acc="{:.3f}".format(trn_acc * 100.0),
           val_acc="{:.3f}".format(val_acc * 100.0),
           lr="{:.3e}".format(model.lr.eval()))
-      exp_logger.log(niter + 1, "train ce", ce)
-      exp_logger.flush()
+
+      if save_folder is not None:
+        exp_logger.log(niter + 1, "train ce", ce)
+        exp_logger.flush()
+
+    if (niter + 1) % 10000 == 0 and save_folder is not None:
+      save(sess, saver, niter + 1, model.config, save_folder)
+
   acc = evaluate(sess, model_val, 50)
   exp_logger.close()
   return acc
@@ -221,6 +230,8 @@ def main():
   else:
     exp_id = FLAGS.id
     dataset_name = exp_id.split("_")[1]
+
+  save_folder = os.path.join(FLAGS.results, exp_id)
 
   # Initializes variables.
   sconfig = tf.ConfigProto()
@@ -315,7 +326,7 @@ def main():
     # Trains a model.
     if not FLAGS.eval:
       acc = train_model(
-          sess, exp_id, config, model, model_val, save_folder=None)
+          sess, exp_id, config, model, model_val, save_folder=save_folder)
 
     val_acc = evaluate(sess, model_val, 50)
     test_acc = evaluate(sess, model_test, 100)
