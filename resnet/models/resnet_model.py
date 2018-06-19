@@ -454,7 +454,10 @@ class ResnetModel(object):
 
   def _global_avg_pool(self, x):
     # assert x.get_shape().ndims == 4
-    return tf.reduce_mean(x, [1, 2])
+    if self.config.data_format == "NHWC":
+      return tf.reduce_mean(x, [1, 2])
+    else:
+      return tf.reduce_mean(x, [2, 3])
 
   def infer_step(self, sess, inp=None):
     """Run inference."""
